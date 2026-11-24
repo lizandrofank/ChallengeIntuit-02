@@ -1,10 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using ConsultasPlan.Data;
+using ConsultasPlan.Models;
+using ConsultasPlan.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=consultas.db"));
+builder.Services.Configure<PoliticaCupoOptions>(
+    builder.Configuration.GetSection("PoliticaCupo"));
+builder.Services.AddScoped<IPoliticaCupoService, PoliticaCupoService>();
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
