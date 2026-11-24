@@ -46,6 +46,10 @@ public class ConsultasController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CrearConsulta([FromBody] CrearConsultaRequest request)
     {
+        var fechaHoraUtc = request.FechaHora.ToUtc();
+        if (fechaHoraUtc <= DateTime.UtcNow)
+            return BadRequest(new { mensaje = "No se puede agendar una consulta en una fecha pasada o en el momento actual." });
+
         if (!request.AfiliadoId.HasValue)
             return BadRequest(new { mensaje = "El afiliado es obligatorio." });
 
@@ -63,14 +67,14 @@ public class ConsultasController : ControllerBase
         var resultadoCupo = await _politicaCupoService.ValidarAsync(
             request.AfiliadoId.Value,
             request.ProfesionalId,
-            request.FechaHora,
+            fechaHoraUtc,
             request.Modalidad);
         if (!resultadoCupo.Permitida)
             return BadRequest(new { mensaje = resultadoCupo.Mensaje });
 
         var consultaConflicto = await _context.Consultas.AnyAsync(c =>
             c.ProfesionalId == request.ProfesionalId &&
-            c.FechaHora == request.FechaHora &&
+            c.FechaHora == fechaHoraUtc &&
             c.Estado != EstadoConsulta.Cancelado);
         if (consultaConflicto)
             return BadRequest(new { mensaje = "El profesional ya tiene una consulta en ese horario." });
@@ -79,7 +83,7 @@ public class ConsultasController : ControllerBase
         {
             AfiliadoId = request.AfiliadoId,
             ProfesionalId = request.ProfesionalId,
-            FechaHora = request.FechaHora,
+            FechaHora = fechaHoraUtc,
             Modalidad = request.Modalidad,
             Motivo = request.Motivo,
             FechaCreacion = DateTime.UtcNow,
@@ -96,7 +100,7 @@ public class ConsultasController : ControllerBase
         var consulta = await _context.Consultas.FindAsync(id);
         if (consulta == null) return NotFound();
 
-        if (consulta.FechaHora - DateTime.UtcNow < TimeSpan.FromHours(24))
+        if (consulta.FechaHora.ToUtc() - DateTime.UtcNow < TimeSpan.FromHours(24))
             return BadRequest(new { mensaje = "No se puede cancelar con menos de 24 horas de anticipación." });
 
         consulta.Estado = EstadoConsulta.Cancelado;
@@ -110,7 +114,7 @@ public class ConsultasController : ControllerBase
         var consulta = await _context.Consultas.FindAsync(id);
         if (consulta == null) return NotFound();
 
-        if (consulta.FechaHora > DateTime.UtcNow)
+        if (consulta.FechaHora.ToUtc() > DateTime.UtcNow)
             return BadRequest(new { mensaje = "No se puede registrar una inasistencia sobre una consulta futura." });
 
         consulta.Estado = EstadoConsulta.Inasistencia;

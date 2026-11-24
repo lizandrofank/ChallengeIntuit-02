@@ -1,4 +1,5 @@
 using ConsultasPlan.Data;
+using ConsultasPlan.Helpers;
 using ConsultasPlan.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -56,9 +57,10 @@ public class PoliticaCupoService : IPoliticaCupoService
         if (!esEspecialidadAplicable)
             return new ResultadoPoliticaCupo(true);
 
-        var inicioAnio = new DateTime(fechaHora.Year, 1, 1);
+        fechaHora = fechaHora.ToUtc();
+        var inicioAnio = new DateTime(fechaHora.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var finAnio = inicioAnio.AddYears(1);
-        var inicioMes = new DateTime(fechaHora.Year, fechaHora.Month, 1);
+        var inicioMes = new DateTime(fechaHora.Year, fechaHora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var finMes = inicioMes.AddMonths(1);
 
         var consultasAplicables = _context.Consultas

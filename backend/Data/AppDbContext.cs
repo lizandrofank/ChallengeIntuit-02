@@ -23,6 +23,32 @@ public class AppDbContext : DbContext
             .HasConversion<string>();
 
         modelBuilder.Entity<Consulta>()
+            .Property(c => c.FechaHora)
+            .HasConversion(
+                fecha => fecha,
+                fecha => DateTime.SpecifyKind(fecha, DateTimeKind.Utc));
+
+        modelBuilder.Entity<Consulta>()
+            .Property(c => c.FechaCreacion)
+            .HasConversion(
+                fecha => fecha,
+                fecha => DateTime.SpecifyKind(fecha, DateTimeKind.Utc));
+
+        modelBuilder.Entity<Afiliado>()
+            .Property(a => a.createdAt)
+            .HasConversion(
+                fecha => fecha,
+                fecha => DateTime.SpecifyKind(fecha, DateTimeKind.Utc));
+
+        modelBuilder.Entity<Afiliado>()
+            .Property(a => a.FechaBloqueo)
+            .HasConversion(
+                fecha => fecha,
+                fecha => fecha.HasValue
+                    ? DateTime.SpecifyKind(fecha.Value, DateTimeKind.Utc)
+                    : null);
+
+        modelBuilder.Entity<Consulta>()
             .HasOne(c => c.Afiliado)
             .WithMany()
             .HasForeignKey(c => c.AfiliadoId)
