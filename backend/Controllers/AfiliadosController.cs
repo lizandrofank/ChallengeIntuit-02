@@ -1,7 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ConsultasPlan.Data;
 using ConsultasPlan.Models;
+using ConsultasPlan.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ConsultasPlan.Controllers;
 
@@ -9,61 +8,50 @@ namespace ConsultasPlan.Controllers;
 [Route("[controller]")]
 public class AfiliadosController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IAfiliadosService _service;
 
-    public AfiliadosController(AppDbContext context)
-    {
-        _context = context;
-    }
+    public AfiliadosController(IAfiliadosService service) => _service = service;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
-    {
-        var afiliados = await _context.Afiliados.ToListAsync();
-        return Ok(afiliados);
-    }
+    public async Task<IActionResult> GetAll(CancellationToken cancellationToken) => Ok(await _service.GetAllAsync(cancellationToken));
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
     {
-        var afiliado = await _context.Afiliados.FindAsync(id);
-        if (afiliado == null) return NotFound();
-        return Ok(afiliado);
+        var afiliado = await _service.GetByIdAsync(id, cancellationToken);
+        return afiliado == null ? NotFound() : Ok(afiliado);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] Afiliado afiliado)
+    public async Task<IActionResult> Create([FromBody] Afiliado afiliado, CancellationToken cancellationToken)
     {
-        afiliado.createdAt = DateTime.UtcNow;
-        afiliado.isActive = true;
-        _context.Afiliados.Add(afiliado);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetById), new { id = afiliado.Id }, afiliado);
+        var result = await _service.CreateAsync(afiliado, cancellationToken);
+        if (result.Status != ServiceStatus.Success)
+            return BadRequest(new { mensaje = result.Message });
+        return CreatedAtAction(nameof(GetById), new { id = result.Data!.Id }, result.Data);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] Afiliado afiliado)
+    public async Task<IActionResult> Update(int id, [FromBody] Afiliado afiliado, CancellationToken cancellationToken)
     {
-        var existing = await _context.Afiliados.FindAsync(id);
-        if (existing == null) return NotFound();
-
-        existing.NombreCompleto = afiliado.NombreCompleto;
-        existing.DNI = afiliado.DNI;
-        existing.Email = afiliado.Email;
-        existing.Telefono = afiliado.Telefono;
-
-        await _context.SaveChangesAsync();
-        return Ok(existing);
+        var result = await _service.UpdateAsync(id, afiliado, cancellationToken);
+        return result.Status switch
+        {
+            ServiceStatus.Success => Ok(result.Data),
+            ServiceStatus.NotFound => NotFound(new { mensaje = result.Message }),
+            _ => BadRequest(new { mensaje = result.Message })
+        };
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var afiliado = await _context.Afiliados.FindAsync(id);
-        if (afiliado == null) return NotFound();
-
-        _context.Afiliados.Remove(afiliado);
-        await _context.SaveChangesAsync();
-        return NoContent();
+        var result = await _service.DeleteAsync(id, cancellationToken);
+        return result.Status switch
+        {
+            ServiceStatus.Success => NoContent(),
+            ServiceStatus.NotFound => NotFound(new { mensaje = result.Message }),
+            _ => BadRequest(new { mensaje = result.Message })
+        };
     }
 }

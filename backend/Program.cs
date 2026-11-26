@@ -10,6 +10,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<PoliticaCupoOptions>(
     builder.Configuration.GetSection("PoliticaCupo"));
 builder.Services.AddScoped<IPoliticaCupoService, PoliticaCupoService>();
+builder.Services.AddScoped<ISedesService, SedesService>();
+builder.Services.AddScoped<IProfesionalesService, ProfesionalesService>();
+builder.Services.AddScoped<IAfiliadosService, AfiliadosService>();
+builder.Services.AddScoped<IConsultasService, ConsultasService>();
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
